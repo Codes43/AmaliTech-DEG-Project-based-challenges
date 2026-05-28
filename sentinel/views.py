@@ -110,10 +110,9 @@ def register_monitor(request):
             # Force save to compute next_alert_at
             monitor.save()
             
-        # Set Redis timer
+        # Set or update the Redis timer to match the monitor state
         r = get_redis_client()
-        if r:
-            r.setex(f"sentinel:monitor:{monitor.id}:timer", timeout, "active")
+        sync_redis_timer(monitor, r)
             
         status_code = 201 if created else 200
         response_msg = "Monitor registered successfully." if created else "Monitor configuration updated."
@@ -153,10 +152,9 @@ def heartbeat_monitor(request, monitor_id):
         monitor.last_heartbeat = timezone.now()
         monitor.save() # recalculates next_alert_at
         
-        # Reset Redis timer
+        # Keep Redis timer aligned with the monitor state
         r = get_redis_client()
-        if r:
-            r.setex(f"sentinel:monitor:{monitor.id}:timer", monitor.timeout, "active")
+        sync_redis_timer(monitor, r)
             
         return JsonResponse({
             "status": "ok",
@@ -187,10 +185,9 @@ def pause_monitor(request, monitor_id):
         monitor.status = 'paused'
         monitor.save()
         
-        # Clear Redis timer
+        # Keep Redis timer aligned with the monitor state
         r = get_redis_client()
-        if r:
-            r.delete(f"sentinel:monitor:{monitor.id}:timer")
+        sync_redis_timer(monitor, r)
             
         return JsonResponse({
             "status": "paused",

@@ -24,9 +24,8 @@ class Monitor(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        # Automatically calculate next_alert_at if not set or when last_heartbeat changes
-        if not self.next_alert_at or 'last_heartbeat' in kwargs or True:
-            self.next_alert_at = self.last_heartbeat + timedelta(seconds=self.timeout)
+        # Always update the expiration timestamp when the monitor is saved.
+        self.next_alert_at = self.last_heartbeat + timedelta(seconds=self.timeout)
         super().save(*args, **kwargs)
 
     def __str__(self):
